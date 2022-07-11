@@ -1,0 +1,69 @@
+	<%= javascript_include_tag "clipboard.min" %>
+	<h2><%= @user.username %></h2>
+	<%= link_to "logout", "/logout" %><br><br>
+	
+	<h3><%= @folder.name %></h3>
+	
+        <%= form_with url: "/upload", method: :patch do |form| %>
+                <%= form.file_field :files, multiple: true  %><br>
+                <%= submit_tag "Upload" %>
+        <% end %>
+	
+	<% if(@folder.parent != nil) %>
+	  <%= link_to "..", chdir_path(:folder_id => @folder.parent.id) %>
+	  <br>
+	<% end %>
+	
+	<% @folder.children.each do |folder| %>
+                <%= link_to folder.name, chdir_path(:folder_id => folder.id) %>
+                <%= link_to "remove", removef_path(:folder_id => folder.id) %>
+                <%= form_with url: "/change_dirname", method: :patch do |form| %>
+                	<%= form.text_field :name %><br>
+                	<%= hidden_field_tag 'folder_id', folder.id  %>
+                	<%= submit_tag "", :style => "display: none;"%>
+                <% end %>
+                <br>
+        <% end %>
+        <br>
+
+        <% @folder.files.each_with_index do |file, index| %>
+                <%= file.filename %>
+                <%= link_to "remove", remove_path(:file_id => index) %>
+                <%= link_to 'download', rails_blob_path(file, disposition: :attachment) %>
+                <%= form_with url: "/change_filename", method: :patch do |form| %>
+                	<%= form.text_field :name %><br>
+                	<%= hidden_field_tag 'file_id', index %>
+                	<%= submit_tag "", :style => "display: none;"%>
+                <% end %>
+                <% if(link = @folder.links.where(fid: index).first) != nil %>
+                	<textarea id="link_to", style="display:none"><%= public_link_path + '/' + link.id.to_s %></textarea>
+
+			<button class="copyButton" data-clipboard-action="copy" data-clipboard-target="#link_to" >
+    			Copy link
+			</button>
+			<script type="text/javasript"> 
+				var clipboard = new Clipboard('.copyButton');
+				clipboard.on('success', function(e) {
+    					console.log(e);
+				});
+				clipboard.on('error', function(e) {
+    					console.log(e);
+				});
+			</script>
+			<%= link_to "remove link", remove_link_path(:link_id => link.id) %>
+                <% else %>
+                <%= button_to "Generate link", links_path, method: "post", params: { link: rails_blob_path(file, disposition: :attachment), fid: index } %>
+                <% end %>
+                
+                <br>
+        <% end %>
+        
+        <%= form_with url: "/create_folder", method: :patch do |form| %>
+                <%= form.text_field :name %><br>
+                <%= submit_tag "Create folder" %>
+        <% end %>
+
+        <br>
+        attached?
+        <%= @folder.files.attached? %>
+        
